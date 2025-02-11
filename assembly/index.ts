@@ -9,7 +9,7 @@ function jwtVerify(token: string, secret: string): JwtValidation {
   const parts = token.split(".");
   if (parts.length !== 3) {
     console.log("Invalid token format");
-    return JwtValidation.Invalid;
+    return JwtValidation.;
   }
 
   // Decode the JWT token

@@ -1,0 +1,6 @@
+[submodule "modules/as-hmac-sha2"]
+	path = modules/as-hmac-sha2
+	url = https://github.com/jedisct1/as-hmac-sha2
+[submodule "modules/as-base64"]
+	path = modules/as-base64
+	url = https://github.com/near/as-base64
