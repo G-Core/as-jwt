@@ -19,16 +19,9 @@ function decodeBase64(input: string): Uint8Array {
     }
   }
 
-  // // Add padding if needed
-  // let padding = (4 - (base64.length % 4)) % 4;
-  // for (let i = 0; i < padding; i++) {
-  //   base64 += "=";
-  // }
-
-  const padding = base64.length % 4;
-  if (padding === 2) {
-    base64 += "==";
-  } else if (padding === 3) {
+  // Add padding if needed
+  let padding = (4 - (base64.length % 4)) % 4;
+  for (let i = 0; i < padding; i++) {
     base64 += "=";
   }
 
