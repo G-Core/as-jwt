@@ -9,7 +9,8 @@
     "asbuild:optimized": "asc assembly/index.ts --target release",
     "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized",
     "test": "asp --verbose",
-    "test:ci": "asp --summary"
+    "test:ci": "asp --summary",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -31,7 +32,8 @@
   "devDependencies": {
     "@as-pect/cli": "^8.0.1",
     "@assemblyscript/loader": "^0.27.34",
-    "assemblyscript": "^0.27.34"
+    "assemblyscript": "^0.27.34",
+    "husky": "^9.0.11"
   },
   "dependencies": {
     "assemblyscript-json": "^1.1.0"
