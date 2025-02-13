@@ -1,7 +1,7 @@
 import { JSON } from "assemblyscript-json/assembly";
 
 import { Sha256, Sha512, verify } from "../modules/as-hmac-sha2/assembly";
-import { decodeBase64, encodeBase64 } from "./utils";
+import { decodeBase64 } from "./utils";
 
 import { Date } from "assemblyscript/std/assembly/date";
 
@@ -58,21 +58,20 @@ function jwtVerify(token: string, secret: string): JwtValidation {
   }
 
   const parts = token.split(".");
+
   // Decode the JWT token
   const payload = decodeBase64(parts[1]);
   const jsonClaimsObj: JSON.Obj = <JSON.Obj>(
     JSON.parse(String.UTF8.decode(payload.buffer))
   );
 
-  // // RFC 7519 states that the exp , nbf and iat claim values must be NumericDate values.
-  const expValueOrNull: JSON.Value | null = jsonClaimsObj.getValue("exp");
-  if (expValueOrNull == null) {
+  // RFC 7519 states that the exp , nbf and iat claim values must be NumericDate values.
+  const expOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("exp");
+  if (expOrNull == null) {
     return JwtValidation.BadToken;
   }
 
-  const expValue = <JSON.Value>expValueOrNull;
-  const expStr = expValue.stringify();
-  const exp: i64 = I64.parseInt(expStr) * 1000;
+  const exp: i64 = expOrNull.valueOf() * 1000;
   const now: i64 = Date.now();
   if (now > exp) {
     return JwtValidation.Expired;

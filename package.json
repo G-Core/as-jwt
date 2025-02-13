@@ -9,7 +9,8 @@
     "asbuild:optimized": "asc assembly/index.ts --target release",
     "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized",
     "test": "asp --verbose",
-    "test:ci": "asp --summary"
+    "test:ci": "asp --summary",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -29,9 +30,10 @@
   },
   "homepage": "https://github.com/godronus/as-jwt#readme",
   "devDependencies": {
-    "@as-pect/cli": "^7.0.8",
-    "@assemblyscript/loader": "^0.21.3",
-    "assemblyscript": "^0.21.7"
+    "@as-pect/cli": "^8.0.1",
+    "@assemblyscript/loader": "^0.27.34",
+    "assemblyscript": "^0.27.34",
+    "husky": "^9.0.11"
   },
   "dependencies": {
     "assemblyscript-json": "^1.1.0"
