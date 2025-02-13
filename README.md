@@ -22,7 +22,7 @@ const result: JwtValidation = jwtVerify(token, secret, {
 });
 
 if (result === JwtValidation.Ok) {
-  // Jwt is valid
+  // Jwt is valid.
 } else {
   // Jwt validation failed
 }
