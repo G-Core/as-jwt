@@ -29,7 +29,19 @@ if (result === JwtValidation.Ok) {
 
 ### jwtVerify()
 
-jwtVerify(jwt, key): JwtValidation
+`jwtVerify(token, secret): JwtValidation`
+
+Validates `token` signature has been signed with a valid `secret`.
+
+Also validates that claims contain an `exp` date and that the token is not expired.
+
+### compactVerify()
+
+`compactVerify(token, secret): JwtValidation`
+
+Validates `token` signature has been signed with a valid `secret`.
+
+Does NOT validate any claims in the payload.
 
 ### Internal Libraries:
 

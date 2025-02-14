@@ -4,9 +4,6 @@ on:
   push:
     # If you add a branch here, you **MUST** create a branch rule in Github settings
     branches: ["*.*.x", "*.x", "main", "next", "next-major", "beta", "alpha"]
-    paths:
-      - "src/**"
-      - "runtime/**"
 
   workflow_dispatch: # trigger manually
     inputs:
