@@ -1,8 +1,8 @@
 {
   "name": "@gcoredev/as-jwt",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha.1",
   "description": "AssemblyScript package that provides simple jws handling for jwt tokens/",
-  "main": "index.js",
+  "main": "assembly/index.ts",
   "type": "module",
   "scripts": {
     "asbuild:untouched": "asc assembly/index.ts --target debug",
@@ -18,10 +18,22 @@
   },
   "keywords": [
     "assemblyscript",
+    "crypto",
     "hmac",
-    "sha256",
     "jwt",
-    "jws"
+    "jws",
+    "sha256",
+    "sha512"
+  ],
+  "files": [
+    "assembly/*.*",
+    "modules/as-base64/assembly",
+    "modules/as-base64/README.md",
+    "modules/as-base64/package.json",
+    "modules/as-hmac-sha2/assembly",
+    "modules/as-hmac-sha2/README.md",
+    "modules/as-hmac-sha2/package.json",
+    "README.md"
   ],
   "author": "Gordon Farquharson <godronus@yahoo.com>",
   "license": "Apache-2.0",
