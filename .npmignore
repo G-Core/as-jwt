@@ -1,0 +1,4 @@
+/assembly/__tests__/
+modules/as-base64/assembly/__tests__/
+modules/as-hmac-sha2/assembly/__tests__/
+index.js
