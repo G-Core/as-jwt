@@ -3,8 +3,6 @@ import { JSON } from "assemblyscript-json/assembly";
 import { Sha256, Sha512, verify } from "../modules/as-hmac-sha2/assembly";
 import { decodeBase64 } from "./utils";
 
-import { Date } from "assemblyscript/std/assembly/date";
-
 enum JwtValidation {
   Ok = 0,
   BadToken = 1,

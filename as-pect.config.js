@@ -29,8 +29,4 @@ export default {
    * Specify if the binary wasm file should be written to the file system.
    */
   outputBinary: false,
-
-  setup: () => {
-    process.env.ASC_TARGET = 5;
-  },
 };
