@@ -31,16 +31,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download libs Artifact
+      - name: Download Modules Artifact
         uses: actions/download-artifact@v4
         with:
-          name: libs-artifact
+          name: modules-artifact
 
-      - name: display contents of lib folder
-        run: ls -la lib
-
-      - name: display contents of bin folder
-        run: ls -la bin
+      - name: display contents of modules folder
+        run: ls -la modules
 
       - name: Dry Run Status
         id: dry_run
@@ -53,9 +50,18 @@ jobs:
             echo "dry_run=" >> $GITHUB_OUTPUT
           fi
 
+      - name: Import Secrets
+        uses: hashicorp/vault-action@v3
+        id: secrets
+        with:
+          url: https://puppet-vault.gc.onl
+          token: ${{ secrets.VAULT_TOKEN }}
+          secrets: |
+            secret/project_fastedge/npmjs token | NPM_TOKEN
+
       - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ steps.secrets.outputs.NPM_TOKEN }}
           CI: true # Used to bypass husky hooks
         run: npx semantic-release ${{ steps.dry_run.outputs.dry_run }}

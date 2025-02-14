@@ -16,10 +16,7 @@ import { jwtVerify, JwtValidation } from "@gcoredev/as-jwt/assembly";
 const token = "<base64-header>.<base64-payload>.<signed-secret>";
 const secret = "my-long-private-key-that-is-hard-to-guess";
 
-const result: JwtValidation = jwtVerify(token, secret, {
-  issuer: "urn:example:issuer",
-  audience: "urn:example:audience",
-});
+const result: JwtValidation = jwtVerify(token, secret);
 
 if (result === JwtValidation.Ok) {
   // Jwt is valid.
@@ -32,7 +29,7 @@ if (result === JwtValidation.Ok) {
 
 ### jwtVerify()
 
-jwtVerify(jwt, key, options?): JwtValidation
+jwtVerify(jwt, key): JwtValidation
 
 ### Internal Libraries:
 

@@ -56,17 +56,26 @@ jobs:
         run: |
           npm run test
 
-  build_fastedge_artifacts:
-    needs: [unit_tests]
-    uses: ./.github/workflows/build-libs.yaml
-    secrets:
-      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      - name: Upload Modules Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modules-artifact
+          retention-days: 1
+          path: |
+            "modules/as-base64/assembly",
+            "modules/as-base64/README.md",
+            "modules/as-base64/package.json",
+            "modules/as-hmac-sha2/assembly",
+            "modules/as-hmac-sha2/README.md",
+            "modules/as-hmac-sha2/package.json",
+            "!modules/as-base64/assembly/__tests__/",
+            "!modules/as-hmac-sha2/assembly/__tests__/",
 
   npm_release:
-    needs: [build_fastedge_artifacts]
+    needs: [unit_tests]
     uses: ./.github/workflows/release.yaml
     with:
       dry_run: ${{ github.event.inputs.dry_run || 'true' }}
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
