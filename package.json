@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/godronus/as-jwt.git"
+    "url": "git+https://github.com/G-Core/as-jwt.git"
   },
   "keywords": [
     "assemblyscript",
@@ -39,12 +39,12 @@
     "!index.js",
     "README.md"
   ],
-  "author": "Gordon Farquharson <godronus@yahoo.com>",
+  "author": "Gordon Farquharson",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/godronus/as-jwt/issues"
+    "url": "https://github.com/G-Core/as-jwt/issues"
   },
-  "homepage": "https://github.com/godronus/as-jwt#readme",
+  "homepage": "https://github.com/G-Core/as-jwt#readme",
   "devDependencies": {
     "@as-pect/cli": "^8.0.1",
     "@assemblyscript/loader": "^0.27.34",
