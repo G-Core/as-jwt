@@ -1,6 +1,6 @@
 {
   "name": "@gcoredev/as-jwt",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1",
   "description": "AssemblyScript package that provides simple jws handling for jwt tokens/",
   "main": "assembly/index.ts",
   "type": "module",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/godronus/as-jwt.git"
+    "url": "git+https://github.com/G-Core/as-jwt.git"
   },
   "keywords": [
     "assemblyscript",
@@ -33,17 +33,22 @@
     "modules/as-hmac-sha2/assembly",
     "modules/as-hmac-sha2/README.md",
     "modules/as-hmac-sha2/package.json",
+    "!assembly/__tests__/",
+    "!modules/as-base64/assembly/__tests__/",
+    "!modules/as-hmac-sha2/assembly/__tests__/",
+    "!index.js",
     "README.md"
   ],
-  "author": "Gordon Farquharson <godronus@yahoo.com>",
+  "author": "Gordon Farquharson",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/godronus/as-jwt/issues"
+    "url": "https://github.com/G-Core/as-jwt/issues"
   },
-  "homepage": "https://github.com/godronus/as-jwt#readme",
+  "homepage": "https://github.com/G-Core/as-jwt#readme",
   "devDependencies": {
     "@as-pect/cli": "^8.0.1",
     "@assemblyscript/loader": "^0.27.34",
+    "@semantic-release/changelog": "^6.0.3",
     "assemblyscript": "^0.27.34",
     "husky": "^9.0.11"
   },
