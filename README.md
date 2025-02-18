@@ -49,7 +49,7 @@ At present there are some issues with JWS tokens signed using SHA256.
 
 A basic token containing:
 
-```
+```json
 {
   "alg": "HS256",
   "typ": "JWT"
@@ -64,7 +64,7 @@ Will `pass` compactVerify(), however adding an extra field like `exp` value will
 
 It is possible to still use verifyJwt() with `SHA256` however you will need to keep to max 3 claims. e.g.
 
-```
+```json
 {
   "alg": "HS256",
   "typ": "JWT"
