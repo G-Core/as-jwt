@@ -25,6 +25,10 @@
     "sha256",
     "sha512"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "files": [
     "assembly/*.*",
     "modules/as-base64/assembly",
