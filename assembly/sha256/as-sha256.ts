@@ -1,10 +1,13 @@
-// https://github.com/ChainSafe/as-sha256/blob/master/assembly/index.ts
-// const DIGEST_LENGTH = 32;
-const INPUT_LENGTH = 512;
-
-function setU8(t: Uint8Array, s: Uint8Array, o: isize = 0): void {
-  memory.copy(t.dataStart + o, s.dataStart, s.length);
-}
+/*
+* The code in this file is from https://github.com/ChainSafe/as-sha256/blob/master/assembly/index.ts
+* Copyright 2019 ChainSafe Systems
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+*
+* All modifcations have been noted within the code.
+*
+*/
 
 // constants used in the SHA256 compression function
 const K: u32[] = [
@@ -133,17 +136,17 @@ function hashBlocks(wPtr: usize, mPtr: usize): void {
 
   // Load message blocks into first 16 expanded message blocks
   for (i = 0; i < 16; i++) {
-    store32(wPtr, i,
-      load32be(mPtr, i)
-    );
+    store32(wPtr, i, load32be(mPtr, i));
   }
   // Expand message blocks 17-64
   for (i = 16; i < 64; i++) {
-    store32(wPtr, i,
+    store32(
+      wPtr,
+      i,
       SIG1(load32(wPtr, i - 2)) +
-      load32(wPtr, i - 7) +
-      SIG0(load32(wPtr, i - 15)) +
-      load32(wPtr, i - 16)
+        load32(wPtr, i - 7) +
+        SIG0(load32(wPtr, i - 15)) +
+        load32(wPtr, i - 16)
     );
   }
 
@@ -171,7 +174,7 @@ function hashBlocks(wPtr: usize, mPtr: usize): void {
   H7 += h;
 }
 
-function init(): void {
+export function init(): void {
   H0 = 0x6a09e667;
   H1 = 0xbb67ae85;
   H2 = 0x3c6ef372;
@@ -182,10 +185,10 @@ function init(): void {
   H7 = 0x5be0cd19;
 
   mLength = 0;
-  bytesHashed  = 0;
+  bytesHashed = 0;
 }
 
-function update(dataPtr: usize, dataLength: i32): void {
+export function update(dataPtr: usize, dataLength: i32): void {
   let dataPos = 0;
   bytesHashed += dataLength;
   // If message blocks buffer has data, fill to 64
@@ -213,16 +216,16 @@ function update(dataPtr: usize, dataLength: i32): void {
   }
   // If any additional bytes remain, copy into message blocks buffer
   if (dataLength & 63) {
-    const frac = dataLength & 63
+    const frac = dataLength & 63;
     memory.copy(mPtr + mLength, dataPtr + dataPos, dataLength & 63);
     mLength += dataLength & 63;
   }
 }
 
-function final(outPtr: usize): void {
+export function final(outPtr: usize): void {
   // one additional round of hashes required
   // because padding will not fit
-  if ((bytesHashed & 63) <= 63) {
+  if ((bytesHashed & 63) <= 63) {  //! @gcoredev: This line has been modified from the original (message bodies of length 127 failed)
     store8(mPtr, mLength, 0x80);
     mLength++;
   }
@@ -231,7 +234,7 @@ function final(outPtr: usize): void {
     hashBlocks(wPtr, mPtr);
     mLength = 0;
   }
-  if ((bytesHashed & 63) > 63) {
+  if ((bytesHashed & 63) > 63) { //! @gcoredev: This line has been modified from the original (message bodies of length 127 failed)
     store8(mPtr, mLength, 0x80);
     mLength++;
   }
@@ -252,41 +255,3 @@ function final(outPtr: usize): void {
   store32(outPtr, 6, bswap(H6));
   store32(outPtr, 7, bswap(H7));
 }
-
-
-/**
-   * HMAC-SHA-256
-   * @param m Message
-   * @param k Key
-   * @returns `HMAC-SHA-256(m, k)`
-   */
-function sha256Hmac(m: Uint8Array, k: Uint8Array): Uint8Array {
-  if (k.length > 64) {
-    // k = Sha256.hash(k);  todo: should become??
-    // init()
-    // update()
-    // final()
-  }
-  let b = new Uint8Array(64);
-  setU8(b, k);
-  for (let i = 0; i < b.length; ++i) {
-    b[i] ^= 0x36;
-  }
-  let outChain = new Uint8Array(32);
-  init();
-  update(b.dataStart, b.length);
-  update(m.dataStart, m.length);
-  final(outChain.dataStart);
-
-  for (let i = 0; i < b.length; ++i) {
-    b[i] ^= 0x6a;
-  }
-
-  init();
-  update(b.dataStart, b.length);
-  update(outChain.dataStart, outChain.length);
-  final(outChain.dataStart);
-  return outChain;
-}
-
-export { sha256Hmac }
