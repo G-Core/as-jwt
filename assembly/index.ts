@@ -1,7 +1,9 @@
 import { JSON } from "assemblyscript-json/assembly";
 
-import { Sha256, Sha512, verify } from "../modules/as-hmac-sha2/assembly";
-import { decodeBase64 } from "./utils";
+import { Sha512, verify } from "../modules/as-hmac-sha2/assembly";
+
+import { sha256Hmac } from "./sha256";
+import { decodeBase64, isValidJsonObj } from "./utils";
 
 enum JwtValidation {
   Ok = 0,
@@ -19,9 +21,12 @@ function compactVerify(token: string, secret: string): JwtValidation {
 
   // Decode the JWT token
   const header = decodeBase64(parts[0]);
-  const jsonHeaderObj: JSON.Obj = <JSON.Obj>(
-    JSON.parse(String.UTF8.decode(header.buffer))
-  );
+  const headerStr = String.UTF8.decode(header.buffer);
+  if (!isValidJsonObj(headerStr)) {
+    return JwtValidation.BadToken;
+  }
+
+  const jsonHeaderObj: JSON.Obj = <JSON.Obj>JSON.parse(headerStr);
 
   const algOrNull: JSON.Str | null = jsonHeaderObj.getString("alg");
   if (algOrNull == null) {
@@ -38,7 +43,7 @@ function compactVerify(token: string, secret: string): JwtValidation {
   const secretUint8Array = Uint8Array.wrap(String.UTF8.encode(secret));
   const expectedSignature =
     alg === "HS256"
-      ? Sha256.hmac(dataUint8Array, secretUint8Array)
+      ? sha256Hmac(dataUint8Array, secretUint8Array)
       : Sha512.hmac(dataUint8Array, secretUint8Array);
   const providedSignature = decodeBase64(parts[2]);
 
@@ -59,9 +64,11 @@ function jwtVerify(token: string, secret: string): JwtValidation {
 
   // Decode the JWT token
   const payload = decodeBase64(parts[1]);
-  const jsonClaimsObj: JSON.Obj = <JSON.Obj>(
-    JSON.parse(String.UTF8.decode(payload.buffer))
-  );
+  const payloadStr = String.UTF8.decode(payload.buffer);
+  if (!isValidJsonObj(payloadStr)) {
+    return JwtValidation.BadToken;
+  }
+  const jsonClaimsObj: JSON.Obj = <JSON.Obj>JSON.parse(payloadStr);
 
   // RFC 7519 states that the exp , nbf and iat claim values must be NumericDate values.
   const expOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("exp");

@@ -49,43 +49,10 @@ Validates `token` signature has been signed with a valid `secret`.
 
 Does NOT validate any claims in the payload.
 
-## Known Issues
-
-At present there are some issues with JWS tokens signed using SHA256.
-
-A basic token containing:
-
-```
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}.{
-  "sub": "1234567890",
-  "name": "John Doe",
-  "iat": 1516239022
-}
-```
-
-Will `pass` compactVerify(), however adding an extra field like `exp` value will cause it to fail. Claim payloads with more than 3 entries fails `SHA256` hashing. This is **NOT** a problem with `SHA512` and we would advise to use this at present.
-
-It is possible to still use verifyJwt() with `SHA256` however you will need to keep to max 3 claims. e.g.
-
-```
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}.{
-  "exp": 2051226061,
-  "name": "John Doe",
-  "iat": 1516239022
-}
-```
-
-Issue: https://github.com/jedisct1/as-hmac-sha2/issues/4
-
 ### Internal Libraries:
 
 Under the hood this package is powered by:
 
 - [as-hmac-sha2](https://github.com/jedisct1/as-hmac-sha2)
 - [as-base64](https://github.com/near/as-base64)
+- [as-sha256](https://github.com/ChainSafe/as-sha256)

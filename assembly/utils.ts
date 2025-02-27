@@ -28,4 +28,25 @@ function decodeBase64(input: string): Uint8Array {
   return decode(base64);
 }
 
-export { decodeBase64, encodeBase64 };
+function isValidJsonObj(str: string): boolean {
+  if (str.charAt(0) !== "{" || str.charAt(str.length - 1) !== "}") {
+    return false;
+  }
+  let brackets = 0;
+  let braces = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charAt(i);
+    if (char === "[") {
+      brackets += 1;
+    } else if (char === "]") {
+      brackets -= 1;
+    } else if (char === "{") {
+      braces += 1;
+    } else if (char === "}") {
+      braces -= 1;
+    }
+  }
+  return brackets === 0 && braces === 0;
+}
+
+export { decodeBase64, encodeBase64, isValidJsonObj };

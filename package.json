@@ -30,7 +30,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "files": [
-    "assembly/*.*",
+    "assembly/**/*.*",
     "modules/as-base64/assembly",
     "modules/as-base64/README.md",
     "modules/as-base64/package.json",
