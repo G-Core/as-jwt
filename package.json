@@ -12,6 +12,11 @@
     "test:ci": "asp --summary",
     "prepare": "husky"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "glob-promise"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/G-Core/as-jwt.git"
@@ -50,10 +55,11 @@
   },
   "homepage": "https://github.com/G-Core/as-jwt#readme",
   "devDependencies": {
+    "@as-pect/assembly": "^8.0.1",
     "@as-pect/cli": "^8.0.1",
-    "@assemblyscript/loader": "^0.27.34",
+    "@assemblyscript/loader": "^0.28.9",
     "@semantic-release/changelog": "^6.0.3",
-    "assemblyscript": "^0.27.34",
+    "assemblyscript": "^0.28.9",
     "husky": "^9.0.11"
   },
   "dependencies": {
