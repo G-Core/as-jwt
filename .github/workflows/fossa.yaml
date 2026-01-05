@@ -13,7 +13,7 @@ jobs:
   fossa:
     runs-on: ubuntu-latest
 
-    if: github.actor != 'dependabot[bot]' && github.repository == 'G-Core/FastEdge-sdk-js'
+    if: github.actor != 'dependabot[bot]' && github.repository == 'G-Core/as-jwt'
 
     steps:
       - name: Checkout repository
