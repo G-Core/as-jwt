@@ -41,7 +41,7 @@ jobs:
       FOSSA_PUB_API_KEY: ${{ secrets.FOSSA_PUB_API_KEY }}
 
   npm_release:
-    needs: [unit_tests, fossa]
+    needs: [unit_tests]
     uses: ./.github/workflows/release.yaml
     with:
       dry_run: ${{ github.event.inputs.dry_run || 'true' }}
