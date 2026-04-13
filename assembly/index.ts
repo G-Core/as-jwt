@@ -70,7 +70,7 @@ function jwtVerify(token: string, secret: string): JwtValidation {
   }
   const jsonClaimsObj: JSON.Obj = <JSON.Obj>JSON.parse(payloadStr);
 
-  // RFC 7519 states that the exp , nbf and iat claim values must be NumericDate values.
+  // RFC 7519 states that the exp , nbf and iat claim values must be NumericDate values
   const expOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("exp");
   if (expOrNull == null) {
     return JwtValidation.BadToken;
