@@ -55,12 +55,12 @@
   },
   "homepage": "https://github.com/G-Core/as-jwt#readme",
   "devDependencies": {
-    "@as-pect/assembly": "^8.0.1",
-    "@as-pect/cli": "^8.0.1",
-    "@assemblyscript/loader": "^0.28.9",
+    "@as-pect/assembly": "^8.1.0",
+    "@as-pect/cli": "^8.1.0",
+    "@assemblyscript/loader": "^0.28.14",
     "@semantic-release/changelog": "^6.0.3",
-    "assemblyscript": "^0.28.9",
-    "husky": "^9.0.11"
+    "assemblyscript": "^0.28.14",
+    "husky": "^9.1.7"
   },
   "dependencies": {
     "assemblyscript-json": "^1.1.0"
