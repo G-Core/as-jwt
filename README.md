@@ -56,3 +56,43 @@ Under the hood this package is powered by:
 - [as-hmac-sha2](https://github.com/jedisct1/as-hmac-sha2)
 - [as-base64](https://github.com/near/as-base64)
 - [as-sha256](https://github.com/ChainSafe/as-sha256)
+
+## Development
+
+### Release process
+
+Releases are handled by `semantic-release`, which derives the version from git
+tags and commit messages. It runs from `.github/workflows/release.yaml`, and
+note that it runs in **dry-run mode on push** -- publishing requires manually
+dispatching the *Deploy to NPM* workflow with `dry_run` set to `false`.
+
+No `semantic-release` configuration file is present, so its default plugin set
+applies: `commit-analyzer`, `release-notes-generator`, `npm` and `github`.
+Release notes are therefore generated and published as GitHub Release bodies.
+There is deliberately no `CHANGELOG.md`: the release notes live in GitHub
+Releases instead. Adding one would require the `@semantic-release/changelog`
+and `@semantic-release/git` plugins plus a config file, since the version and
+changelog would need committing back to the repository.
+
+Because the default plugins are all bundled with `semantic-release` itself, no
+plugin packages are needed as devDependencies.
+
+### Dependency overrides
+
+`pnpm.overrides` pins one transitive **dev** dependency to a patched version.
+It does not ship to consumers -- the published package's only runtime
+dependency is `assemblyscript-json`, and `pnpm audit --prod` is clean without
+it. It exists to clear a security advisory in the test toolchain.
+
+| Override | Pulled in by | Advisory |
+| --- | --- | --- |
+| `fast-uri@^3` -> `3.1.7` | `@as-pect/cli` -> `@as-covers/core` -> `@as-covers/glue` -> `table` -> `ajv` | host confusion via failed IDN canonicalization, literal backslash authority delimiter, backslash authority introducer |
+
+The target stays inside the `^3.0.1` range `ajv` declares, so no package
+receives a major version it was not tested against. Upgrading `@as-pect/cli`
+does not help: it pins `@as-covers/core` at exactly `0.4.2`, so the chain
+persists regardless.
+
+**Remove the override once its parent dependency ships the fix itself.** To
+check, delete the entry, run `pnpm install && pnpm audit`, and keep the
+deletion if the audit stays clean.
