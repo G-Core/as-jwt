@@ -129,10 +129,12 @@ function jwtVerify(
   const now: i64 = nowMillis / 1000;
 
   // A negative tolerance has no meaning, and an unbounded one would overflow
-  // the comparisons below, so both ends are clamped. Clamping a tolerance only
-  // ever narrows what is accepted; claim values themselves are rejected rather
-  // than clamped, since clamping those would turn a malformed claim into a
-  // different, possibly valid one.
+  // the comparisons below, so both ends are clamped. Normalising a negative
+  // value to zero is not a tightening: it discards the sign rather than
+  // honouring it, so a negative argument verifies exactly as 0 does and never
+  // more strictly. Claim values are rejected rather than clamped, since
+  // clamping those would turn a malformed claim into a different, possibly
+  // valid one.
   let leeway: i64 = leewaySeconds;
   if (leeway < 0) {
     leeway = 0;
@@ -147,7 +149,8 @@ function jwtVerify(
     return JwtValidation.BadToken;
   }
   // RFC 7519 section 4.1.4 requires the current time to be strictly before exp,
-  // so exp == now is already expired.
+  // so at a leeway of 0 an exp equal to now is already expired. A positive
+  // leeway relaxes that: the accepted grace window becomes [exp, exp + leeway).
   if (now >= exp && now - exp >= leeway) {
     return JwtValidation.Expired;
   }
