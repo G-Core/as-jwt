@@ -71,7 +71,32 @@ by a fast signer clock:
 const result = jwtVerify(token, secret, 60, true);
 ```
 
-Requiring `exp` is stricter than RFC 7519, which makes every claim optional.
+#### Accepted claim values
+
+Time claims are compared in whole seconds and must be integers in the range
+`0` to `253402300799` (9999-12-31T23:59:59Z). A claim outside that range, or one
+that is not an integer, is rejected as `BadToken`. The bound is what keeps the
+comparisons from overflowing: an unbounded claim near the limit of a 64-bit
+integer wraps negative and slips past the check it should have failed.
+
+`leewaySeconds` is clamped to that same range, and a negative value is
+normalised to `0`. Note that this is a normalisation, not a guarantee of
+strictness: a negative tolerance has no meaning and is **not** honoured as a
+tightening, so passing one is equivalent to passing `0` and never verifies more
+strictly than `0` would.
+
+#### Deviations from RFC 7519
+
+- **Only integer NumericDate values are accepted.** RFC 7519 section 2 permits
+  non-integer NumericDates, so a token carrying `"exp": 1704070861.5` is
+  spec-compliant but is rejected here as `BadToken`. It fails closed, and
+  whole-second timestamps are what issuers emit in practice. This applies to
+  `exp` and `nbf` always, but to `iat` only when `validateIat` is enabled —
+  with it off, `iat` is not examined at all, so a malformed or out-of-range
+  `iat` is simply ignored.
+- **`exp` is required**, where RFC 7519 makes every claim optional.
+- **`exp` equal to the current second is treated as expired**, per RFC 7519
+  section 4.1.4, which requires the current time to be strictly before `exp`.
 
 The `iss`, `aud`, `sub` and `jti` claims are **not** validated. If your
 application relies on them, decode the payload and check them yourself.

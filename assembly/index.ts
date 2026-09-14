@@ -4,6 +4,41 @@ import { Sha256, Sha512, verify } from "../modules/as-hmac-sha2/assembly";
 
 import { decodeBase64, isValidJsonObj } from "./utils";
 
+/**
+ * Latest NumericDate this library accepts: 9999-12-31T23:59:59Z. Claims are
+ * compared in seconds and bounded to 0..MAX_NUMERIC_DATE so that no comparison
+ * can overflow i64. Without that bound a claim near i64's limit wraps negative
+ * and the comparison silently passes, accepting a token it should reject.
+ */
+const MAX_NUMERIC_DATE: i64 = 253402300799;
+
+/** readNumericDate() sentinels. Both sit outside the valid claim range. */
+const CLAIM_ABSENT: i64 = -1;
+const CLAIM_INVALID: i64 = -2;
+
+/**
+ * Reads a NumericDate claim, in seconds.
+ *
+ * Returns CLAIM_ABSENT when the claim is not present, or CLAIM_INVALID when it
+ * is present but not a usable NumericDate: a non-integer, or a value outside
+ * 0..MAX_NUMERIC_DATE. Only integer NumericDate values are accepted; see the
+ * README for that deviation from RFC 7519.
+ */
+function readNumericDate(claims: JSON.Obj, key: string): i64 {
+  if (!claims.has(key)) {
+    return CLAIM_ABSENT;
+  }
+  const value: JSON.Integer | null = claims.getInteger(key);
+  if (value == null) {
+    return CLAIM_INVALID;
+  }
+  const seconds: i64 = value.valueOf();
+  if (seconds < 0 || seconds > MAX_NUMERIC_DATE) {
+    return CLAIM_INVALID;
+  }
+  return seconds;
+}
+
 enum JwtValidation {
   Ok = 0,
   BadToken = 1,
@@ -87,44 +122,56 @@ function jwtVerify(
   }
   const jsonClaimsObj: JSON.Obj = <JSON.Obj>JSON.parse(payloadStr);
 
-  // RFC 7519 states that the exp , nbf and iat claim values must be NumericDate values.
-  const expOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("exp");
-  if (expOrNull == null) {
+  const nowMillis: i64 = Date.now();
+  if (nowMillis < 0) {
     return JwtValidation.BadToken;
   }
+  const now: i64 = nowMillis / 1000;
 
-  const exp: i64 = expOrNull.valueOf() * 1000;
-  const now: i64 = Date.now();
-  const leeway: i64 = leewaySeconds * 1000;
-  if (now - leeway > exp) {
+  // A negative tolerance has no meaning, and an unbounded one would overflow
+  // the comparisons below, so both ends are clamped. Clamping a tolerance only
+  // ever narrows what is accepted; claim values themselves are rejected rather
+  // than clamped, since clamping those would turn a malformed claim into a
+  // different, possibly valid one.
+  let leeway: i64 = leewaySeconds;
+  if (leeway < 0) {
+    leeway = 0;
+  } else if (leeway > MAX_NUMERIC_DATE) {
+    leeway = MAX_NUMERIC_DATE;
+  }
+
+  // exp is required. Every comparison below subtracts only after establishing
+  // which side is larger, so none of them can overflow.
+  const exp: i64 = readNumericDate(jsonClaimsObj, "exp");
+  if (exp == CLAIM_ABSENT || exp == CLAIM_INVALID) {
+    return JwtValidation.BadToken;
+  }
+  // RFC 7519 section 4.1.4 requires the current time to be strictly before exp,
+  // so exp == now is already expired.
+  if (now >= exp && now - exp >= leeway) {
     return JwtValidation.Expired;
   }
 
-  // Unlike exp, the nbf and iat claims are optional. When either is checked and
-  // present it must still be a NumericDate, so a claim of the wrong type is a
-  // bad token rather than something to skip over.
-  if (jsonClaimsObj.has("nbf")) {
-    const nbfOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("nbf");
-    if (nbfOrNull == null) {
-      return JwtValidation.BadToken;
-    }
-    const nbf: i64 = nbfOrNull.valueOf() * 1000;
-    if (now + leeway < nbf) {
-      return JwtValidation.NotBefore;
-    }
+  // nbf is optional, but when present it must still be a usable NumericDate, so
+  // a malformed one is a bad token rather than something to skip over.
+  const nbf: i64 = readNumericDate(jsonClaimsObj, "nbf");
+  if (nbf == CLAIM_INVALID) {
+    return JwtValidation.BadToken;
+  }
+  if (nbf != CLAIM_ABSENT && nbf > now && nbf - now > leeway) {
+    return JwtValidation.NotBefore;
   }
 
   // Opt-in, and skipped entirely when not requested: RFC 7519 mandates no
   // check on iat. A token issued later than the current time cannot be valid
   // yet, but with a clock-skew allowance of zero that is easily triggered by
   // nothing worse than a signer whose clock runs slightly ahead.
-  if (validateIat && jsonClaimsObj.has("iat")) {
-    const iatOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("iat");
-    if (iatOrNull == null) {
+  if (validateIat) {
+    const iat: i64 = readNumericDate(jsonClaimsObj, "iat");
+    if (iat == CLAIM_INVALID) {
       return JwtValidation.BadToken;
     }
-    const iat: i64 = iatOrNull.valueOf() * 1000;
-    if (now + leeway < iat) {
+    if (iat != CLAIM_ABSENT && iat > now && iat - now > leeway) {
       return JwtValidation.NotBefore;
     }
   }
