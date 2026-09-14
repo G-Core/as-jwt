@@ -1,8 +1,7 @@
 import { JSON } from "assemblyscript-json/assembly";
 
-import { Sha512, verify } from "../modules/as-hmac-sha2/assembly";
+import { Sha256, Sha512, verify } from "../modules/as-hmac-sha2/assembly";
 
-import { sha256Hmac } from "./sha256";
 import { decodeBase64, isValidJsonObj } from "./utils";
 
 enum JwtValidation {
@@ -43,7 +42,7 @@ function compactVerify(token: string, secret: string): JwtValidation {
   const secretUint8Array = Uint8Array.wrap(String.UTF8.encode(secret));
   const expectedSignature =
     alg === "HS256"
-      ? sha256Hmac(dataUint8Array, secretUint8Array)
+      ? Sha256.hmac(dataUint8Array, secretUint8Array)
       : Sha512.hmac(dataUint8Array, secretUint8Array);
   const providedSignature = decodeBase64(parts[2]);
 

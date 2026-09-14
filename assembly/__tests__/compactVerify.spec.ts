@@ -162,3 +162,18 @@ describe("compactVerify (SHA-256, secret longer than the block size)", (): void 
     expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
   });
 });
+
+/* A multi-block message exercises the block-boundary path of the hash: the
+ * tail of the message is read through a view whose byteOffset is non-zero.
+ * The signing input below is 459 bytes, past 2x the SHA-512 block size.
+ * Signature from Node crypto.createHmac("sha512", secret).
+ */
+describe("compactVerify (SHA-512, multi-block signing input)", (): void => {
+  it("should pass with a signing input larger than two blocks", (): void => {
+    const valid = compactVerify(
+      "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjIwNTEyMjYwNjEsInVzZXIiOnsiYWRtaW4iOnRydWUsImlkIjoxNTk4NzQ1NiwiZmlyc3ROYW1lIjoiSm9obiIsImxhc3ROYW1lIjoiU21pdGgiLCJjcmVkZW50aWFscyI6ImhmZGo1NjdmZGY3ZjU0ZDY0czM0czM1czY2czNhNjM0NCIsInJvbGUiOiJzYWxlcyJ9LCJkYXRhIjp7ImVudjEiOiJ2YWx1ZTEiLCJlbnYyIjoidmFsdWUyIiwiZW52MyI6InZhbHVlMyIsImVudjQiOiJ2YWx1ZTQiLCJlbnY1IjoidmFsdWU1IiwiZW52NiI6InZhbHVlNiJ9fQ.HCq2Uz142D-Wzp_tYPHkEAYeIlrFb-6Ck03FR7PXWBmJEN1kxnDNdAh3ASXXXz1FAjTPoxBAN3L1XyEuvOMKLA",
+      "a-string-secret-at-least-512-bits-long-so-it-is-super-strong-and-hard-to-break"
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+});
