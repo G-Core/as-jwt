@@ -59,25 +59,40 @@ Under the hood this package is powered by:
 
 ## Development
 
+### Release process
+
+Releases are handled by `semantic-release`, which derives the version from git
+tags and commit messages. It runs from `.github/workflows/release.yaml`, and
+note that it runs in **dry-run mode on push** -- publishing requires manually
+dispatching the *Deploy to NPM* workflow with `dry_run` set to `false`.
+
+No `semantic-release` configuration file is present, so its default plugin set
+applies: `commit-analyzer`, `release-notes-generator`, `npm` and `github`.
+Release notes are therefore generated and published as GitHub Release bodies.
+There is deliberately no `CHANGELOG.md`: the release notes live in GitHub
+Releases instead. Adding one would require the `@semantic-release/changelog`
+and `@semantic-release/git` plugins plus a config file, since the version and
+changelog would need committing back to the repository.
+
+Because the default plugins are all bundled with `semantic-release` itself, no
+plugin packages are needed as devDependencies.
+
 ### Dependency overrides
 
-`pnpm.overrides` pins four transitive **dev** dependencies to patched versions.
-None of these ship to consumers -- the published package's only runtime
+`pnpm.overrides` pins one transitive **dev** dependency to a patched version.
+It does not ship to consumers -- the published package's only runtime
 dependency is `assemblyscript-json`, and `pnpm audit --prod` is clean without
-any of them. They exist to clear security advisories in the test and release
-toolchain.
+it. It exists to clear a security advisory in the test toolchain.
 
 | Override | Pulled in by | Advisory |
 | --- | --- | --- |
-| `fast-uri@^3` -> `3.1.7` | `@as-pect/cli` -> `@as-covers/core` -> `table` -> `ajv` | host confusion via IDN canonicalization, backslash authority delimiter |
-| `js-yaml@^4` -> `4.3.2` | `@semantic-release/changelog` -> `semantic-release` -> `cosmiconfig` | quadratic CPU via YAML merge-key chains |
-| `undici@^6` -> `6.28.1` | `semantic-release` -> `@semantic-release/npm` -> `@actions/core` | cross-user disclosure via private cache directives |
-| `undici@^7` -> `7.29.1` | `semantic-release` -> `@semantic-release/github` | cross-user disclosure via private cache directives |
+| `fast-uri@^3` -> `3.1.7` | `@as-pect/cli` -> `@as-covers/core` -> `@as-covers/glue` -> `table` -> `ajv` | host confusion via failed IDN canonicalization, literal backslash authority delimiter, backslash authority introducer |
 
-Each target stays inside the range its parent declares, so no package receives
-a major version it was not tested against. The `undici` entries are split by
-major line because the two paths require different ones.
+The target stays inside the `^3.0.1` range `ajv` declares, so no package
+receives a major version it was not tested against. Upgrading `@as-pect/cli`
+does not help: it pins `@as-covers/core` at exactly `0.4.2`, so the chain
+persists regardless.
 
-**Remove an override once its parent dependency ships the fix itself.** To
+**Remove the override once its parent dependency ships the fix itself.** To
 check, delete the entry, run `pnpm install && pnpm audit`, and keep the
 deletion if the audit stays clean.
