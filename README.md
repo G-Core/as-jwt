@@ -39,7 +39,23 @@ if (result === JwtValidation.Ok) {
 
 Validates `token` signature has been signed with a valid `secret`.
 
-Also validates that claims contain an `exp` date and that the token is not expired.
+Also validates the time-based claims of RFC 7519 section 4.1:
+
+| Claim | Required | Result when it fails |
+| --- | --- | --- |
+| `exp` | yes | `Expired` if the token has expired, `BadToken` if absent or not a NumericDate |
+| `nbf` | no | `NotBefore` if the token is not yet valid, `BadToken` if present and not a NumericDate |
+| `iat` | no | `NotBefore` if the token was issued in the future, `BadToken` if present and not a NumericDate |
+
+Comparisons are made against the current time with no clock-skew allowance, so
+a token from a signer whose clock runs ahead of the verifier is rejected.
+
+RFC 7519 requires no check on `iat` and treats it as informational; it is
+rejected here only when it postdates the current time, which cannot be valid.
+Requiring `exp` is stricter than RFC 7519, which makes every claim optional.
+
+The `iss`, `aud`, `sub` and `jti` claims are **not** validated. If your
+application relies on them, decode the payload and check them yourself.
 
 ### compactVerify()
 

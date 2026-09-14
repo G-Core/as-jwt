@@ -45,9 +45,9 @@
     "modules/as-hmac-sha2/package.json",
     "THIRD_PARTY_NOTICES.md",
     "NOTICE",
-    "!assembly/__tests__/",
-    "!modules/as-base64/assembly/__tests__/",
-    "!modules/as-hmac-sha2/assembly/__tests__/",
+    "!assembly/__tests__/**",
+    "!modules/as-base64/assembly/__tests__/**",
+    "!modules/as-hmac-sha2/assembly/__tests__/**",
     "!index.js",
     "README.md"
   ],

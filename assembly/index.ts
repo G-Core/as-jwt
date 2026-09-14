@@ -80,6 +80,34 @@ function jwtVerify(token: string, secret: string): JwtValidation {
   if (now > exp) {
     return JwtValidation.Expired;
   }
+
+  // Unlike exp, the nbf and iat claims are optional. When either is present it
+  // must still be a NumericDate, so a claim that is present but of the wrong
+  // type is a bad token rather than something to skip over.
+  if (jsonClaimsObj.has("nbf")) {
+    const nbfOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("nbf");
+    if (nbfOrNull == null) {
+      return JwtValidation.BadToken;
+    }
+    const nbf: i64 = nbfOrNull.valueOf() * 1000;
+    if (now < nbf) {
+      return JwtValidation.NotBefore;
+    }
+  }
+
+  if (jsonClaimsObj.has("iat")) {
+    const iatOrNull: JSON.Integer | null = jsonClaimsObj.getInteger("iat");
+    if (iatOrNull == null) {
+      return JwtValidation.BadToken;
+    }
+    // RFC 7519 treats iat as informational and mandates no check on it, but a
+    // token issued later than the current time cannot be valid yet.
+    const iat: i64 = iatOrNull.valueOf() * 1000;
+    if (now < iat) {
+      return JwtValidation.NotBefore;
+    }
+  }
+
   return JwtValidation.Ok;
 }
 

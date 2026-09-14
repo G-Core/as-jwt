@@ -193,3 +193,63 @@ describe("jwtVerify (SHA-512)", (): void => {
     expect<JwtValidation>(invalidSig).toBe(JwtValidation.Ok);
   });
 });
+
+/* nbf / iat claim validation (RFC 7519 sections 4.1.5 and 4.1.6).
+ *
+ * All tokens below carry exp: 2051226061 (2035-01-01) so the exp check passes
+ * and the nbf/iat check is the one under test. Signed with HMAC-SHA-256 over
+ * "a-string-secret-at-least-256-bits-long-so-its-hard-to-break" via Node
+ * crypto.createHmac. Where a claim is "in the future" it is 2051226061; where
+ * it is "in the past" it is 1516239022 (2018-01-18).
+ */
+describe("jwtVerify (nbf / iat claims)", (): void => {
+  const secret = "a-string-secret-at-least-256-bits-long-so-its-hard-to-break";
+
+  it("should error with a token whose nbf is in the future", (): void => {
+    const notYet = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjIwNTEyMjYwNjF9.wR1-QtqmwShS13_PgufK9Ua0M1LspB27gX5ahFTbpvI",
+      secret
+    );
+    expect<JwtValidation>(notYet).toBe(JwtValidation.NotBefore);
+  });
+
+  it("should pass with a token whose nbf has passed", (): void => {
+    const valid = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjE1MTYyMzkwMjJ9.-7NbMxMgQx5dZ2dpcYxTpvc3_kfz2ClmAKqCsH98CH4",
+      secret
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with an nbf that is not a NumericDate", (): void => {
+    const badNbf = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOiJzb29uIn0.M9fCNEB4lVkmP1j-oj41hTTPKHMkgxNyvHzQt5havGo",
+      secret
+    );
+    expect<JwtValidation>(badNbf).toBe(JwtValidation.BadToken);
+  });
+
+  it("should error with a token issued in the future", (): void => {
+    const notYet = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
+      secret
+    );
+    expect<JwtValidation>(notYet).toBe(JwtValidation.NotBefore);
+  });
+
+  it("should error with an iat that is not a NumericDate", (): void => {
+    const badIat = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOiJ5ZXN0ZXJkYXkifQ.y6wdFvV9optFeYhkE4BxISzW9bBJ875iUZ5pdDrLSvI",
+      secret
+    );
+    expect<JwtValidation>(badIat).toBe(JwtValidation.BadToken);
+  });
+
+  it("should pass with both nbf and iat in the past", (): void => {
+    const valid = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjE1MTYyMzkwMjIsImlhdCI6MTUxNjIzOTAyMn0.YbPH8Vo6oF40dl81cWiE2tAqOVwagO1zBBCYoYfLSwE",
+      secret
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+});
