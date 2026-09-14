@@ -193,3 +193,190 @@ describe("jwtVerify (SHA-512)", (): void => {
     expect<JwtValidation>(invalidSig).toBe(JwtValidation.Ok);
   });
 });
+
+/* nbf / iat claim validation (RFC 7519 sections 4.1.5 and 4.1.6).
+ *
+ * All tokens below carry exp: 2051226061 (2035-01-01) so the exp check passes
+ * and the nbf/iat check is the one under test. Signed with HMAC-SHA-256 over
+ * "a-string-secret-at-least-256-bits-long-so-its-hard-to-break" via Node
+ * crypto.createHmac. Where a claim is "in the future" it is 2051226061; where
+ * it is "in the past" it is 1516239022 (2018-01-18).
+ */
+describe("jwtVerify (nbf / iat claims)", (): void => {
+  const secret = "a-string-secret-at-least-256-bits-long-so-its-hard-to-break";
+
+  it("should error with a token whose nbf is in the future", (): void => {
+    const notYet = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjIwNTEyMjYwNjF9.wR1-QtqmwShS13_PgufK9Ua0M1LspB27gX5ahFTbpvI",
+      secret
+    );
+    expect<JwtValidation>(notYet).toBe(JwtValidation.NotBefore);
+  });
+
+  it("should pass with a token whose nbf has passed", (): void => {
+    const valid = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjE1MTYyMzkwMjJ9.-7NbMxMgQx5dZ2dpcYxTpvc3_kfz2ClmAKqCsH98CH4",
+      secret
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with an nbf that is not a NumericDate", (): void => {
+    const badNbf = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOiJzb29uIn0.M9fCNEB4lVkmP1j-oj41hTTPKHMkgxNyvHzQt5havGo",
+      secret
+    );
+    expect<JwtValidation>(badNbf).toBe(JwtValidation.BadToken);
+  });
+
+  it("should ignore an iat in the future by default", (): void => {
+    const ignored = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
+      secret
+    );
+    expect<JwtValidation>(ignored).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with a token issued in the future when iat is validated", (): void => {
+    const notYet = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
+      secret,
+      0,
+      true
+    );
+    expect<JwtValidation>(notYet).toBe(JwtValidation.NotBefore);
+  });
+
+  it("should accept a future iat that falls inside the leeway", (): void => {
+    // nbf/iat are 2051226061; a leeway wide enough to cover the gap.
+    const withinLeeway = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
+      secret,
+      10000000000,
+      true
+    );
+    expect<JwtValidation>(withinLeeway).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with an iat that is not a NumericDate when iat is validated", (): void => {
+    const badIat = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOiJ5ZXN0ZXJkYXkifQ.y6wdFvV9optFeYhkE4BxISzW9bBJ875iUZ5pdDrLSvI",
+      secret,
+      0,
+      true
+    );
+    expect<JwtValidation>(badIat).toBe(JwtValidation.BadToken);
+  });
+
+  it("should ignore a malformed iat by default", (): void => {
+    const ignored = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOiJ5ZXN0ZXJkYXkifQ.y6wdFvV9optFeYhkE4BxISzW9bBJ875iUZ5pdDrLSvI",
+      secret
+    );
+    expect<JwtValidation>(ignored).toBe(JwtValidation.Ok);
+  });
+
+  it("should accept a future nbf that falls inside the leeway", (): void => {
+    const withinLeeway = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjIwNTEyMjYwNjF9.wR1-QtqmwShS13_PgufK9Ua0M1LspB27gX5ahFTbpvI",
+      secret,
+      10000000000
+    );
+    expect<JwtValidation>(withinLeeway).toBe(JwtValidation.Ok);
+  });
+
+  it("should accept an expired token that falls inside the leeway", (): void => {
+    // exp is 978310861 (2001-01-01); the leeway is wide enough to cover it.
+    const withinLeeway = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk3ODMxMDg2MX0.8gFYYu_OhSOVfa689V7oCx0epBaHOL_N93A7LTvCYTo",
+      secret,
+      10000000000
+    );
+    expect<JwtValidation>(withinLeeway).toBe(JwtValidation.Ok);
+  });
+
+  it("should pass with both nbf and iat in the past", (): void => {
+    const valid = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjE1MTYyMzkwMjIsImlhdCI6MTUxNjIzOTAyMn0.YbPH8Vo6oF40dl81cWiE2tAqOVwagO1zBBCYoYfLSwE",
+      secret
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+});
+
+/* Malformed and out-of-range time claims.
+ *
+ * Claims are compared in seconds and bounded to 0..253402300799
+ * (9999-12-31T23:59:59Z). Without that bound a claim near i64's limit overflows
+ * the milliseconds conversion, wraps negative, and passes the comparison --
+ * accepting a token whose nbf or iat is far in the future. All tokens below are
+ * correctly signed; only their claim values are hostile.
+ */
+describe("jwtVerify (malformed time claims)", (): void => {
+  const secret = "a-string-secret-at-least-256-bits-long-so-its-hard-to-break";
+
+  it("should error with an nbf beyond the supported range", (): void => {
+    // nbf: 9223372036854776 -- overflows if multiplied up to milliseconds.
+    const outOfRange = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjkyMjMzNzIwMzY4NTQ3NzZ9.ox3hJsBcn5x-LAZhcYL_QZkAFzc0lmEQaQ77g03QAAs",
+      secret
+    );
+    expect<JwtValidation>(outOfRange).toBe(JwtValidation.BadToken);
+  });
+
+  it("should error with an iat beyond the supported range", (): void => {
+    const outOfRange = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjkyMjMzNzIwMzY4NTQ3NzZ9.0_j6J273n9LpW9aAlaZI5FvIHFdjbqKdb6BMXRfEg9Q",
+      secret,
+      0,
+      true
+    );
+    expect<JwtValidation>(outOfRange).toBe(JwtValidation.BadToken);
+  });
+
+  it("should error with a fractional nbf (integer NumericDate only)", (): void => {
+    const fractional = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjE3MDQwNzA4NjEuNX0.hvWRi9MlrULxTOYaKAFCbGIyqvZotk4iCp-IBbfX9hE",
+      secret
+    );
+    expect<JwtValidation>(fractional).toBe(JwtValidation.BadToken);
+  });
+
+  it("should error with a fractional exp (integer NumericDate only)", (): void => {
+    const fractional = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoyMDUxMjI2MDYxLjV9.QOML73ybeWYuUeCRVuRPssh3L45kBGCdUC89iM3qNCY",
+      secret
+    );
+    expect<JwtValidation>(fractional).toBe(JwtValidation.BadToken);
+  });
+
+  it("should ignore an out-of-range iat when iat is not validated", (): void => {
+    const ignored = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjkyMjMzNzIwMzY4NTQ3NzZ9.0_j6J273n9LpW9aAlaZI5FvIHFdjbqKdb6BMXRfEg9Q",
+      secret
+    );
+    expect<JwtValidation>(ignored).toBe(JwtValidation.Ok);
+  });
+
+  /* A negative leeway has no meaning and is clamped to zero. It must never widen
+   * what is accepted: before the claims were bounded, a large negative leeway
+   * overflowed the exp comparison and accepted an expired token.
+   */
+  it("should still reject an expired token given a negative leeway", (): void => {
+    const expired = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk3ODMxMDg2MX0.8gFYYu_OhSOVfa689V7oCx0epBaHOL_N93A7LTvCYTo",
+      secret,
+      -9223372036854775
+    );
+    expect<JwtValidation>(expired).toBe(JwtValidation.Expired);
+  });
+
+  it("should still accept a valid token given a negative leeway", (): void => {
+    const valid = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjIwNTEyMjYwNjF9.Uyk9PmPCWesH_pgffCoUUtAQD56M_Y1A2bFS322u6FI",
+      secret,
+      -9223372036854775
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+});

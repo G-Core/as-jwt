@@ -1,0 +1,12 @@
+@gcoredev/as-jwt
+Copyright 2025 G-Core Innovations SARL
+
+This product includes software developed at G-Core Innovations SARL,
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product also bundles third-party software under separate licenses.
+Both components are included unmodified. See THIRD_PARTY_NOTICES.md for
+the components, their copyright holders, and their license texts:
+
+  - as-hmac-sha2 (ISC), Copyright (c) 2021-2026 Frank Denis
+  - as-base64 (MIT), Copyright (c) 2018 NEAR Protocol

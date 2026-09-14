@@ -35,11 +35,81 @@ if (result === JwtValidation.Ok) {
 
 ### jwtVerify()
 
-`jwtVerify(token, secret): JwtValidation`
+`jwtVerify(token, secret, leewaySeconds?, validateIat?): JwtValidation`
 
 Validates `token` signature has been signed with a valid `secret`.
 
-Also validates that claims contain an `exp` date and that the token is not expired.
+Also validates the time-based claims of RFC 7519 section 4.1:
+
+| Claim | Checked               | Result when it fails                                                               |
+| ----- | --------------------- | ---------------------------------------------------------------------------------- |
+| `exp` | always                | `Expired` if the token has expired, `BadToken` if absent or not a NumericDate      |
+| `nbf` | when present          | `NotBefore` if the token is not yet valid, `BadToken` if not a NumericDate         |
+| `iat` | only if `validateIat` | `NotBefore` if the token was issued in the future, `BadToken` if not a NumericDate |
+
+#### Clock skew
+
+`leewaySeconds` (default `0`) widens every time comparison in both directions,
+so signer and verifier clocks need not agree exactly. With the default of `0` a
+signer whose clock runs even slightly ahead of the verifier produces tokens
+that are rejected as `NotBefore`. Allow for the drift you actually expect:
+
+```ts
+// tolerate up to a minute of clock drift between signer and verifier
+const result = jwtVerify(token, secret, 60);
+```
+
+#### Validating `iat`
+
+`validateIat` (default `false`) is opt-in because RFC 7519 mandates no check on
+`iat` and treats it as informational. Left off, `iat` is ignored entirely. Turn
+it on to reject tokens issued in the future — but pair it with a `leewaySeconds`
+that covers your clock drift, since this check is the one most easily tripped
+by a fast signer clock:
+
+```ts
+const result = jwtVerify(token, secret, 60, true);
+```
+
+#### Accepted claim values
+
+Time claims are compared in whole seconds and must be integers in the range
+`0` to `253402300799` (9999-12-31T23:59:59Z). A claim outside that range, or one
+that is not an integer, is rejected as `BadToken`. The bound is what keeps the
+comparisons from overflowing: an unbounded claim near the limit of a 64-bit
+integer wraps negative and slips past the check it should have failed.
+
+`leewaySeconds` is clamped to that same range, and a negative value is
+normalised to `0`. Note that this is a normalisation, not a guarantee of
+strictness: a negative tolerance has no meaning and is **not** honoured as a
+tightening, so passing one is equivalent to passing `0` and never verifies more
+strictly than `0` would.
+
+#### Deviations from RFC 7519
+
+- **Only integer NumericDate values are accepted.** RFC 7519 section 2 permits
+  non-integer NumericDates, so a token carrying `"exp": 1704070861.5` is
+  spec-compliant but is rejected here as `BadToken`. It fails closed, and
+  whole-second timestamps are what issuers emit in practice. This applies to
+  `exp` and `nbf` always, but to `iat` only when `validateIat` is enabled —
+  with it off, `iat` is not examined at all, so a malformed or out-of-range
+  `iat` is simply ignored.
+- **`exp` is required**, where RFC 7519 makes every claim optional.
+- **At the default `leewaySeconds` of `0`, an `exp` equal to the current second
+  is treated as expired**, per RFC 7519 section 4.1.4, which requires the
+  current time to be strictly before `exp`. A positive `leewaySeconds`
+  deliberately relaxes that boundary rather than preserving it: the token is
+  rejected only once `now - exp >= leewaySeconds`, giving an accepted grace
+  window of `[exp, exp + leewaySeconds)`. With `leewaySeconds` of `60`, an
+  `exp` up to 59 seconds in the past still verifies. The strict RFC boundary
+  therefore applies only at `0`.
+
+For reference, the matching `nbf` boundary is inclusive at both ends: a token
+is rejected only once `nbf - now > leewaySeconds`, so an `nbf` exactly equal to
+the current second, or exactly `leewaySeconds` ahead of it, is accepted.
+
+The `iss`, `aud`, `sub` and `jti` claims are **not** validated. If your
+application relies on them, decode the payload and check them yourself.
 
 ### compactVerify()
 
@@ -53,46 +123,14 @@ Does NOT validate any claims in the payload.
 
 Under the hood this package is powered by:
 
-- [as-hmac-sha2](https://github.com/jedisct1/as-hmac-sha2)
-- [as-base64](https://github.com/near/as-base64)
-- [as-sha256](https://github.com/ChainSafe/as-sha256)
+- [as-hmac-sha2](https://github.com/jedisct1/as-hmac-sha2) (ISC) — git
+  submodule, unmodified, pinned to `1.0.3`. Do not downgrade below `1.0.3`:
+  earlier revisions read multi-block messages from the wrong buffer offset and
+  produce non-standard digests for signing inputs of 128 bytes (SHA-256) or
+  256 bytes (SHA-512) and above. The npm registry still serves 1.0.2, which is
+  affected, so this dependency is pinned by commit rather than taken from npm.
+- [as-base64](https://github.com/near/as-base64) (MIT) — git submodule,
+  unmodified
 
-## Development
-
-### Release process
-
-Releases are handled by `semantic-release`, which derives the version from git
-tags and commit messages. It runs from `.github/workflows/release.yaml`, and
-note that it runs in **dry-run mode on push** -- publishing requires manually
-dispatching the *Deploy to NPM* workflow with `dry_run` set to `false`.
-
-No `semantic-release` configuration file is present, so its default plugin set
-applies: `commit-analyzer`, `release-notes-generator`, `npm` and `github`.
-Release notes are therefore generated and published as GitHub Release bodies.
-There is deliberately no `CHANGELOG.md`: the release notes live in GitHub
-Releases instead. Adding one would require the `@semantic-release/changelog`
-and `@semantic-release/git` plugins plus a config file, since the version and
-changelog would need committing back to the repository.
-
-Because the default plugins are all bundled with `semantic-release` itself, no
-plugin packages are needed as devDependencies.
-
-### Dependency overrides
-
-`pnpm.overrides` pins one transitive **dev** dependency to a patched version.
-It does not ship to consumers -- the published package's only runtime
-dependency is `assemblyscript-json`, and `pnpm audit --prod` is clean without
-it. It exists to clear a security advisory in the test toolchain.
-
-| Override | Pulled in by | Advisory |
-| --- | --- | --- |
-| `fast-uri@^3` -> `3.1.7` | `@as-pect/cli` -> `@as-covers/core` -> `@as-covers/glue` -> `table` -> `ajv` | host confusion via failed IDN canonicalization, literal backslash authority delimiter, backslash authority introducer |
-
-The target stays inside the `^3.0.1` range `ajv` declares, so no package
-receives a major version it was not tested against. Upgrading `@as-pect/cli`
-does not help: it pins `@as-covers/core` at exactly `0.4.2`, so the chain
-persists regardless.
-
-**Remove the override once its parent dependency ships the fix itself.** To
-check, delete the entry, run `pnpm install && pnpm audit`, and keep the
-deletion if the audit stays clean.
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for full license texts
+and a description of the modifications.
