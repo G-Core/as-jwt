@@ -127,3 +127,38 @@ describe("compactVerify (SHA-512)", (): void => {
     expect<JwtValidation>(invalidSig).toBe(JwtValidation.Ok);
   });
 });
+
+/* RFC 2104: a key longer than the 64-byte block size must be hashed first.
+ * Secret is 65 bytes ("K" * 64 + "A"); signatures from Node crypto.createHmac.
+ */
+describe("compactVerify (SHA-256, secret longer than the block size)", (): void => {
+  const longSecret =
+    "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKA";
+  const unsignedToken =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ";
+
+  it("should pass with a signature over the whole secret", (): void => {
+    const valid = compactVerify(
+      unsignedToken + ".nrV6raRjKnMiWbdW86MgiJCw2Cgd3FNdJ1TKByYDwO4",
+      longSecret
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with a signature over only the first 64 bytes", (): void => {
+    const truncated = compactVerify(
+      unsignedToken + ".pB3C5CEtVxov-oFj9REgFUKTzHjhJXlz3Ohqo5EbhHw",
+      longSecret
+    );
+    expect<JwtValidation>(truncated).toBe(JwtValidation.Invalid);
+  });
+  it("should pass with a 1000-byte secret (pad write canary)", (): void => {
+    let longer = "";
+    for (let i = 0; i < 1000; ++i) longer += "K";
+    const valid = compactVerify(
+      unsignedToken + ".dPeHMZ1-oNL8H1aEeeBT2is4NtjBL20IAXKSTbhRTyM",
+      longer
+    );
+    expect<JwtValidation>(valid).toBe(JwtValidation.Ok);
+  });
+});

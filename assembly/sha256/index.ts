@@ -6,9 +6,21 @@ import { final, init, update } from "./as-sha256";
  *
  */
 
-/** This function is a direct copy of the one in as-hmac-sha2 */
+/**
+ * This function is based on the one in as-hmac-sha2, but never writes past the
+ * end of the destination.
+ */
 function setU8(t: Uint8Array, s: Uint8Array, o: isize = 0): void {
-  memory.copy(t.dataStart + o, s.dataStart, s.length);
+  memory.copy(t.dataStart + o, s.dataStart, min(s.length, t.length - o));
+}
+
+/** SHA-256 of a single-part message, using the crypto functions in as-sha256. */
+function sha256(m: Uint8Array): Uint8Array {
+  let out = new Uint8Array(32);
+  init();
+  update(m.dataStart, m.length);
+  final(out.dataStart);
+  return out;
 }
 
 /**
@@ -19,11 +31,9 @@ function setU8(t: Uint8Array, s: Uint8Array, o: isize = 0): void {
  * @returns `HMAC-SHA-256(m, k)`
  */
 function sha256Hmac(m: Uint8Array, k: Uint8Array): Uint8Array {
+  // RFC 2104: a key longer than the block size must be hashed first.
   if (k.length > 64) {
-    // k = Sha256.hash(k);  todo: should become??
-    // init()
-    // update()
-    // final()
+    k = sha256(k);
   }
   let b = new Uint8Array(64);
   setU8(b, k);
