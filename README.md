@@ -95,8 +95,18 @@ strictly than `0` would.
   with it off, `iat` is not examined at all, so a malformed or out-of-range
   `iat` is simply ignored.
 - **`exp` is required**, where RFC 7519 makes every claim optional.
-- **`exp` equal to the current second is treated as expired**, per RFC 7519
-  section 4.1.4, which requires the current time to be strictly before `exp`.
+- **At the default `leewaySeconds` of `0`, an `exp` equal to the current second
+  is treated as expired**, per RFC 7519 section 4.1.4, which requires the
+  current time to be strictly before `exp`. A positive `leewaySeconds`
+  deliberately relaxes that boundary rather than preserving it: the token is
+  rejected only once `now - exp >= leewaySeconds`, giving an accepted grace
+  window of `[exp, exp + leewaySeconds)`. With `leewaySeconds` of `60`, an
+  `exp` up to 59 seconds in the past still verifies. The strict RFC boundary
+  therefore applies only at `0`.
+
+For reference, the matching `nbf` boundary is inclusive at both ends: a token
+is rejected only once `nbf - now > leewaySeconds`, so an `nbf` exactly equal to
+the current second, or exactly `leewaySeconds` ahead of it, is accepted.
 
 The `iss`, `aud`, `sub` and `jti` claims are **not** validated. If your
 application relies on them, decode the payload and check them yourself.
