@@ -229,20 +229,70 @@ describe("jwtVerify (nbf / iat claims)", (): void => {
     expect<JwtValidation>(badNbf).toBe(JwtValidation.BadToken);
   });
 
-  it("should error with a token issued in the future", (): void => {
-    const notYet = jwtVerify(
+  it("should ignore an iat in the future by default", (): void => {
+    const ignored = jwtVerify(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
       secret
+    );
+    expect<JwtValidation>(ignored).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with a token issued in the future when iat is validated", (): void => {
+    const notYet = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
+      secret,
+      0,
+      true
     );
     expect<JwtValidation>(notYet).toBe(JwtValidation.NotBefore);
   });
 
-  it("should error with an iat that is not a NumericDate", (): void => {
+  it("should accept a future iat that falls inside the leeway", (): void => {
+    // nbf/iat are 2051226061; a leeway wide enough to cover the gap.
+    const withinLeeway = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOjIwNTEyMjYwNjF9.e-281IdMmPDVJoiC5iBtB2AMuzlbGEnPXqlRv_IhI0w",
+      secret,
+      10000000000,
+      true
+    );
+    expect<JwtValidation>(withinLeeway).toBe(JwtValidation.Ok);
+  });
+
+  it("should error with an iat that is not a NumericDate when iat is validated", (): void => {
     const badIat = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOiJ5ZXN0ZXJkYXkifQ.y6wdFvV9optFeYhkE4BxISzW9bBJ875iUZ5pdDrLSvI",
+      secret,
+      0,
+      true
+    );
+    expect<JwtValidation>(badIat).toBe(JwtValidation.BadToken);
+  });
+
+  it("should ignore a malformed iat by default", (): void => {
+    const ignored = jwtVerify(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJpYXQiOiJ5ZXN0ZXJkYXkifQ.y6wdFvV9optFeYhkE4BxISzW9bBJ875iUZ5pdDrLSvI",
       secret
     );
-    expect<JwtValidation>(badIat).toBe(JwtValidation.BadToken);
+    expect<JwtValidation>(ignored).toBe(JwtValidation.Ok);
+  });
+
+  it("should accept a future nbf that falls inside the leeway", (): void => {
+    const withinLeeway = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoyMDUxMjI2MDYxLCJuYmYiOjIwNTEyMjYwNjF9.wR1-QtqmwShS13_PgufK9Ua0M1LspB27gX5ahFTbpvI",
+      secret,
+      10000000000
+    );
+    expect<JwtValidation>(withinLeeway).toBe(JwtValidation.Ok);
+  });
+
+  it("should accept an expired token that falls inside the leeway", (): void => {
+    // exp is 978310861 (2001-01-01); the leeway is wide enough to cover it.
+    const withinLeeway = jwtVerify(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk3ODMxMDg2MX0.8gFYYu_OhSOVfa689V7oCx0epBaHOL_N93A7LTvCYTo",
+      secret,
+      10000000000
+    );
+    expect<JwtValidation>(withinLeeway).toBe(JwtValidation.Ok);
   });
 
   it("should pass with both nbf and iat in the past", (): void => {

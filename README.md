@@ -35,23 +35,42 @@ if (result === JwtValidation.Ok) {
 
 ### jwtVerify()
 
-`jwtVerify(token, secret): JwtValidation`
+`jwtVerify(token, secret, leewaySeconds?, validateIat?): JwtValidation`
 
 Validates `token` signature has been signed with a valid `secret`.
 
 Also validates the time-based claims of RFC 7519 section 4.1:
 
-| Claim | Required | Result when it fails |
-| --- | --- | --- |
-| `exp` | yes | `Expired` if the token has expired, `BadToken` if absent or not a NumericDate |
-| `nbf` | no | `NotBefore` if the token is not yet valid, `BadToken` if present and not a NumericDate |
-| `iat` | no | `NotBefore` if the token was issued in the future, `BadToken` if present and not a NumericDate |
+| Claim | Checked               | Result when it fails                                                               |
+| ----- | --------------------- | ---------------------------------------------------------------------------------- |
+| `exp` | always                | `Expired` if the token has expired, `BadToken` if absent or not a NumericDate      |
+| `nbf` | when present          | `NotBefore` if the token is not yet valid, `BadToken` if not a NumericDate         |
+| `iat` | only if `validateIat` | `NotBefore` if the token was issued in the future, `BadToken` if not a NumericDate |
 
-Comparisons are made against the current time with no clock-skew allowance, so
-a token from a signer whose clock runs ahead of the verifier is rejected.
+#### Clock skew
 
-RFC 7519 requires no check on `iat` and treats it as informational; it is
-rejected here only when it postdates the current time, which cannot be valid.
+`leewaySeconds` (default `0`) widens every time comparison in both directions,
+so signer and verifier clocks need not agree exactly. With the default of `0` a
+signer whose clock runs even slightly ahead of the verifier produces tokens
+that are rejected as `NotBefore`. Allow for the drift you actually expect:
+
+```ts
+// tolerate up to a minute of clock drift between signer and verifier
+const result = jwtVerify(token, secret, 60);
+```
+
+#### Validating `iat`
+
+`validateIat` (default `false`) is opt-in because RFC 7519 mandates no check on
+`iat` and treats it as informational. Left off, `iat` is ignored entirely. Turn
+it on to reject tokens issued in the future — but pair it with a `leewaySeconds`
+that covers your clock drift, since this check is the one most easily tripped
+by a fast signer clock:
+
+```ts
+const result = jwtVerify(token, secret, 60, true);
+```
+
 Requiring `exp` is stricter than RFC 7519, which makes every claim optional.
 
 The `iss`, `aud`, `sub` and `jti` claims are **not** validated. If your
