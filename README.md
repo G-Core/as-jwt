@@ -56,3 +56,28 @@ Under the hood this package is powered by:
 - [as-hmac-sha2](https://github.com/jedisct1/as-hmac-sha2)
 - [as-base64](https://github.com/near/as-base64)
 - [as-sha256](https://github.com/ChainSafe/as-sha256)
+
+## Development
+
+### Dependency overrides
+
+`pnpm.overrides` pins four transitive **dev** dependencies to patched versions.
+None of these ship to consumers -- the published package's only runtime
+dependency is `assemblyscript-json`, and `pnpm audit --prod` is clean without
+any of them. They exist to clear security advisories in the test and release
+toolchain.
+
+| Override | Pulled in by | Advisory |
+| --- | --- | --- |
+| `fast-uri@^3` -> `3.1.7` | `@as-pect/cli` -> `@as-covers/core` -> `table` -> `ajv` | host confusion via IDN canonicalization, backslash authority delimiter |
+| `js-yaml@^4` -> `4.3.2` | `@semantic-release/changelog` -> `semantic-release` -> `cosmiconfig` | quadratic CPU via YAML merge-key chains |
+| `undici@^6` -> `6.28.1` | `semantic-release` -> `@semantic-release/npm` -> `@actions/core` | cross-user disclosure via private cache directives |
+| `undici@^7` -> `7.29.1` | `semantic-release` -> `@semantic-release/github` | cross-user disclosure via private cache directives |
+
+Each target stays inside the range its parent declares, so no package receives
+a major version it was not tested against. The `undici` entries are split by
+major line because the two paths require different ones.
+
+**Remove an override once its parent dependency ships the fix itself.** To
+check, delete the entry, run `pnpm install && pnpm audit`, and keep the
+deletion if the audit stays clean.
