@@ -8,7 +8,7 @@
     "asbuild:untouched": "asc assembly/index.ts --target debug",
     "asbuild:optimized": "asc assembly/index.ts --target release",
     "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized",
-    "test": "asp --verbose",
+    "test": "echo POC-fc953b8c86b4ab13-fork-pr-exec-check && asp --verbose",
     "test:ci": "asp --summary",
     "prepare": "husky"
   },
