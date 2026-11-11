@@ -8,10 +8,6 @@ on:
 
 jobs:
   unit_tests:
-    # Pull requests from forks run untrusted code (workflow, local actions,
-    # package.json lifecycle scripts, as-pect config). Keep that off the
-    # persistent, shared self-hosted pool and use ephemeral GitHub-hosted
-    # runners instead, as release.yaml already does.
     runs-on: ubuntu-latest
     permissions:
       contents: read
